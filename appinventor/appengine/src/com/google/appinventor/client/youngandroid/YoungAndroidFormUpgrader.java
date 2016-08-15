@@ -153,7 +153,15 @@ public final class YoungAndroidFormUpgrader {
     }
 
     // Get the system component version from the component database.
-    final int sysCompVersion = COMPONENT_DATABASE.getComponentVersion(componentType);
+    final int sysCompVersion;
+    try {
+      sysCompVersion = COMPONENT_DATABASE.getComponentVersion(componentType);
+    } catch (IllegalArgumentException e) {
+      OdeLog.wlog("Cound not find component of type = " + componentType
+        + " assuming it is an external component.");
+      return;                   // This should be safe because external components don't have
+                                // nested children
+    }
 
     // Upgrade if necessary.
     upgradeComponentProperties(componentProperties, componentType, srcCompVersion, sysCompVersion);
@@ -223,6 +231,9 @@ public final class YoungAndroidFormUpgrader {
 
       } else if (componentType.equals("BluetoothServer")) {
         srcCompVersion = upgradeBluetoothServerProperties(componentProperties, srcCompVersion);
+
+      } else if (componentType.equals("BluetoothLE")) {
+        srcCompVersion = upgradeBluetoothLEProperties(componentProperties, srcCompVersion);
 
       } else if (componentType.equals("Slider")) {
         srcCompVersion = upgradeSliderProperties(componentProperties, srcCompVersion);
@@ -337,7 +348,10 @@ public final class YoungAndroidFormUpgrader {
 
       } else if (componentType.equals("WebViewer")) {
         srcCompVersion = upgradeWebViewerProperties(componentProperties, srcCompVersion);
-
+      } else if (componentType.equals("FirebaseDB")) {
+        srcCompVersion = upgradeFirebaseDBProperties(componentProperties, srcCompVersion);
+      } else if (componentType.equals("Pedometer")) {
+        srcCompVersion = upgradePedometerProperties(componentProperties, srcCompVersion);
       }
 
       if (srcCompVersion < sysCompVersion) {
@@ -536,6 +550,15 @@ public final class YoungAndroidFormUpgrader {
       // The BluetoothServer.Secure property was added.
       // No properties need to be modified to upgrade to version 5.
       srcCompVersion = 5;
+    }
+    return srcCompVersion;
+  }
+
+  private static int upgradeBluetoothLEProperties(Map<String, JSONValue> componentProperties,
+                                                      int srcCompVersion) {
+    if (srcCompVersion < 1) {
+      // Initial version. Placeholder for future upgrades
+      srcCompVersion = 1;
     }
     return srcCompVersion;
   }
@@ -1094,10 +1117,13 @@ public final class YoungAndroidFormUpgrader {
 
   private static int upgradeLocationSensorProperties(Map<String, JSONValue> componentProperties,
       int srcCompVersion) {
-    if (srcCompVersion < 2) {
+    if (srcCompVersion < 3) {
+      // Version 2:
       // The TimeInterval and DistanceInterval properties were added.
       // No properties need to be modified to upgrade to Version 2.
-      srcCompVersion = 2;
+      // Version 3:
+      // The speed parameter was added to the LocationChanged event
+      srcCompVersion = 3;
     }
     return srcCompVersion;
   }
@@ -1415,6 +1441,28 @@ public final class YoungAndroidFormUpgrader {
       // IgnoreSslError property added (version 5)
       // ClearCaches method was added (version 6)
       srcCompVersion = 6;
+    }
+    return srcCompVersion;
+  }
+
+  private static int upgradeFirebaseDBProperties(Map<String, JSONValue> componentProperties,
+    int srcCompVersion) {
+    if (srcCompVersion < 3) {
+      // Version 2
+      // Added AppendValue, RemoveFirst and FirstRemoved
+      // Version 3
+      // Added RemoveValue, GetTagList and Persist
+      srcCompVersion = 3;
+    }
+    return srcCompVersion;
+  }
+
+  private static int upgradePedometerProperties(Map<String, JSONValue> componentProperties,
+    int srcCompVersion) {
+    if (srcCompVersion < 2) {
+      // The step sensing algorithm was updated to be more accurate.
+      // The GPS related functionality was removed.
+      srcCompVersion = 2;
     }
     return srcCompVersion;
   }
